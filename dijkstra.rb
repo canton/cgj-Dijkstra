@@ -1,71 +1,40 @@
 #!/usr/bin/env ruby
 
 
-class Ch
-  attr_accessor :value, :sign
-
-  def initialize(value, sign=1)
-    @value = value
-    @sign = sign
-
-    @map = {
-      "11" => "1",
-      "1i" => "i",
-      "1j" => "j",
-      "1k" => "k",
-
-      "i1" => "i",
-      "ii" => "-1",
-      "ij" => "k",
-      "ik" => "-j",
-
-      "j1" => "j",
-      "ji" => "-k",
-      "jj" => "-1",
-      "jk" => "i",
-
-      "k1" => "k",
-      "ki" => "j",
-      "kj" => "-i",
-      "kk" => "-1",
-
-      "i" => "i",
-      "j" => "j",
-      "k" => "k"
-    }
+def combine(a, b, map)
+  if (a < 0) ^ (b < 0)
+    -map[a.abs][b.abs]
+  else
+    map[a.abs][b.abs]
   end
+end
 
-  def +(that)
-    if that.is_a? Ch
-      value = @map[self.value + that.value]
-      sign = self.sign * that.sign
-    else
-      value = @map[self.value + that]
-      sign = self.sign
-    end
-
-    if value[0] == "-"
-      value = value[1]
-      sign = sign * -1
-    end
-
-    Ch.new(value, sign)
-  end
-
-  def to_s
-    "#{sign == 1 ? '' : '-'}#{value}"
-  end
-
-  def ==(that)
-    self.value == that.value && self.sign == that.sign
-  end
-
-  def eq(s)
-    @value == s && @sign == 1
+def display(x, map)
+  if x < 0
+    "-" + map[x.abs]
+  else
+    map[x]
   end
 end
 
 def solve(s, x)
+  map = [
+    [0, 1, 2, 3, 4],
+    [1, 1, 2, 3, 4],
+    [2, 2,-1, 4,-3],
+    [3, 3,-4,-1, 2],
+    [4, 4, 3,-2,-1]
+  ]
+
+  convert = {
+    "1" => 1,
+    "i" => 2,
+    "j" => 3,
+    "k" => 4
+  }
+
+  invert = convert.invert
+
   fb = [] # front buffer
   bb = [] # back buffer
 
@@ -75,13 +44,13 @@ def solve(s, x)
   if true
     trim_size = 4
     buf = (s * trim_size).split('')
-    temp = Ch.new('')
+    temp = 0
     until buf.empty?
-      temp = temp + buf.shift
-      # puts "#{temp}  #{buf.join(",")}"
+      temp = combine(temp, convert[buf.shift], map)
+      # puts "#{display(temp,invert)}  #{buf.join(",")}"
     end
     # puts "trim? #{temp}"
-    if temp.eq("1")
+    if temp == 1
       trim = (x - 6) / trim_size
       org = x
       x -= trim * trim_size if trim > 0
@@ -90,18 +59,18 @@ def solve(s, x)
   end
 
   # finding i at the front
-  temp = Ch.new('')
+  temp = 0
   until fb.empty? && x == 0 do
     x -= 1 and fb = s.split('') if fb.empty?
-    temp = temp + fb.shift
+    temp = combine(temp, convert[fb.shift], map)
     # puts "  temp:#{temp}, fb:#{fb.join(',')}, x:#{x}"
-    break if temp.eq("i")
+    break if temp == 2
   end
 
-  return "NO" unless temp.eq("i")
+  return "NO" unless temp == 2
 
   # finding k at the back
-  temp = Ch.new('')
+  temp = 0
   until fb.empty? && bb.empty? && x == 0 do
     if bb.empty?
       if x > 0
@@ -113,15 +82,15 @@ def solve(s, x)
       end
     end
 
-    temp = Ch.new(bb.pop) + temp
+    temp = combine(convert[bb.pop], temp, map)
     # puts "  temp:#{temp}, bb:#{bb.join(',')}, x:#{x}, fb:#{fb.join(',')}"
-    break if temp.eq("k")
+    break if temp == 4
   end
 
-  return "NO" unless temp.eq("k")
+  return "NO" unless temp == 4
 
   # merge reminding to see if it is j
-  temp = Ch.new('')
+  temp = 0
   until fb.empty? && bb.empty? && x == 0 do
     if !fb.empty?
       _next = fb.shift
@@ -132,10 +101,10 @@ def solve(s, x)
     else
       _next = bb.shift
     end
-    temp = temp + _next
+    temp = combine(temp, convert[_next], map)
   end
 
-  return "NO" unless temp.eq("j")
+  return "NO" unless temp == 3
 
   return "YES"
 end
